@@ -2,6 +2,7 @@ import requests
 import json
 import argparse
 import os
+import shutil
 
 def getnauthTokens(id):
 	pattern = 'https://api.twitch.tv/api/vods/{0}/access_token'
@@ -75,6 +76,7 @@ def downloadVod(args):
 		os.mkdir(args.path + 'tmp')
 	downloadTS(args.id, links, (args.path + 'tmp/'))
 	combine((args.path + 'tmp/'), args.path)
+	shutil.rmtree(args.path + 'tmp/')
 
 def main():
 	parser = argparse.ArgumentParser()
