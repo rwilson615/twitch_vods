@@ -5,9 +5,10 @@ import os
 
 def getnauthTokens(id):
 	pattern = 'https://api.twitch.tv/api/vods/{0}/access_token'
+	headers = {'Client-ID': 'k4liec7aunkujn6djfee2sb4ge56nj0'}
 	url = pattern.format(id)
 
-	r = requests.get(url)
+	r = requests.get(url, headers=headers)
 	if r.status_code != 200:
 		raise Exception("API returned {0}".format(r.status_code))
 
@@ -50,10 +51,10 @@ def getAlltsLinks(url):
 
 def downloadTS(id, links, path):
 	count = 0
-	listFile = open(path + '/list.m3u8', 'w')
+	listFile = open(path + 'list.m3u8', 'w')
 	for link in links:
 		r = requests.get(link)
-		filename = path + '/' + id + '_' + str(count) + '.ts'
+		filename = path + id + '_' + str(count) + '.ts'
 		with open(filename, 'wb') as output:
 			print 'Writing' + str(count)
 			output.write(r.content)
@@ -61,22 +62,27 @@ def downloadTS(id, links, path):
 		lineToWrite = "file '" + filename + "'\n"
 		listFile.write(lineToWrite)
 
-def combine(path):
+def combine(source, dest):
 	print "Combining"
-	os.system('ffmpeg -f concat -safe 0 -i ' + path + '/' + 'list.m3u8 -bsf:a aac_adtstoasc -c copy ' + path + '/' + 'output.mp4')
+	os.system('ffmpeg -f concat -safe 0 -i ' + source + 'list.m3u8 -bsf:a aac_adtstoasc -c copy ' + dest + 'output.mp4')
+
 
 def downloadVod(args):
 	m3u = getm3u(args.id)
 	m3u8 = getLinkFromm3u(m3u)
 	links = getAlltsLinks(m3u8)
-	downloadTS(args.id, links, args.path)
-	combine(args.path)
+	if not os.path.exists(args.path + 'tmp'):
+		os.mkdir(args.path + 'tmp')
+	downloadTS(args.id, links, (args.path + 'tmp/'))
+	combine((args.path + 'tmp/'), args.path)
 
 def main():
 	parser = argparse.ArgumentParser()
 	parser.add_argument('id', help='The vod id to pull')
 	parser.add_argument('path', help='The download Path')
 	args = parser.parse_args()
+	if not args.path.endswith('/'):
+		args.path = args.path + '/'
 	downloadVod(args)
 
 
