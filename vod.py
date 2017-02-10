@@ -23,20 +23,26 @@ def getm3u(id):
 	r = requests.get(url)
 	if r.status_code != 200:
 		raise Exception("API returned {0}".format(r.status_code))
-
+	print url
 	return r
 
 def getLinkFromm3u(m3u):
 	for line in m3u.iter_lines():
-		if 'high' in line and not line.startswith('#'):
+		if ('high' in line  or '1080p60' in line or '720p60' in line) and not line.startswith('#'):
 			return line
 	raise Exception("No high quality link")
 def truncLink(url):
-	split = url.partition('high')
+	if 'high' in url:
+		split = url.partition('high')
+	elif '1080p60' in url:
+		split = url.partition('1080p60')
+	elif '720p60' in url:
+		split = url.partition('720p60')
 	return split[0] + split[1] + '/'
 
 def getAlltsLinks(url):
 	prefix = truncLink(url)
+	print prefix
 	r = requests.get(url)
 	links = []
 	if r.status_code != 200:
@@ -76,7 +82,7 @@ def downloadVod(args):
 		os.mkdir(args.path + 'tmp')
 	downloadTS(args.id, links, (args.path + 'tmp/'))
 	combine((args.path + 'tmp/'), args.path)
-	shutil.rmtree(args.path + 'tmp/')
+	#shutil.rmtree(args.path + 'tmp/')
 
 def main():
 	parser = argparse.ArgumentParser()
