@@ -82,7 +82,7 @@ def downloadVod(args):
 		os.mkdir(args.path + 'tmp')
 	downloadTS(args.id, links, (args.path + 'tmp/'))
 	combine((args.path + 'tmp/'), args.path)
-	#shutil.rmtree(args.path + 'tmp/')
+	shutil.rmtree(args.path + 'tmp/')
 
 def main():
 	parser = argparse.ArgumentParser()
