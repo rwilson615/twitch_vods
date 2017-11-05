@@ -1,5 +1,7 @@
+#!/usr/bin/env python
 from __future__ import print_function
 from simple_requests import Requests
+from urlparse import urljoin
 import requests
 import json
 import argparse
@@ -7,6 +9,12 @@ import os
 import shutil
 import copy
 import re
+
+def sorted_nicely( l ): 
+	""" Sort the given iterable in the way that humans expect.""" 
+	convert = lambda text: int(text) if text.isdigit() else text 
+	alphanum_key = lambda key: [ convert(c) for c in re.split('([0-9]+)', key) ] 
+	return sorted(l, key = alphanum_key)
 
 def getFileName(url):
 	parts = url.split('/')
@@ -31,29 +39,15 @@ def getm3u(id):
 	r = requests.get(url)
 	if r.status_code != 200:
 		raise Exception("API returned {0}".format(r.status_code))
-	print(url)
 	return r
 
 def getLinkFromm3u(m3u):
 	for line in m3u.iter_lines():
-		if ('high' in line  or '1080p60' in line or '720p60' in line or '720p30' in line) and not line.startswith('#'):
+		if line.startswith('http'):
+			print(line)
 			return line
-	raise Exception("No high quality link")
-
-def truncLink(url):
-	if 'high' in url:
-		split = url.partition('high')
-	elif '1080p60' in url:
-		split = url.partition('1080p60')
-	elif '720p60' in url:
-		split = url.partition('720p60')
-	elif '720p30' in url:
-		split = url.partition('720p30')
-	return split[0] + split[1] + '/'
 
 def getAlltsLinks(url):
-	prefix = truncLink(url)
-	print(prefix)
 	r = requests.get(url)
 	links = []
 	if r.status_code != 200:
@@ -63,12 +57,12 @@ def getAlltsLinks(url):
 			continue
 		if line.startswith('#'):
 			continue
-		fullPath = prefix + line
+		fullPath = urljoin(url, line)
 		links.append(fullPath)
 	return links
 
-def getAllTS(id, links, path):
-	requests = Requests(concurrent=10)
+def getAllTS(id, links, path, threads):
+	requests = Requests(concurrent=threads)
 	for response in requests.swarm(links, maintainOrder=False):
 			writeTS(path, response)
 
@@ -80,34 +74,38 @@ def writeTS(path, response):
 
 def createm3u8(path):
 	files = []
-	for file in sorted(os.listdir(path), key=lambda x: (int(re.sub('\D','',x)),x)):
+	listdir = os.listdir(path)
+	if '.DS_Store' in listdir:
+		listdir.remove('.DS_Store')
+	for file in sorted_nicely(listdir):
 		files.append("file '" + file + "'\n")
 	with open(path + '/list.m3u8', 'w') as m3u8file:
 		for line in files:
 			m3u8file.write(line)
 
-def combine(source, dest):
+def combine(source, dest, filename):
 	print('Combining')
-	os.system('ffmpeg -f concat -safe 0 -i ' + source + 'list.m3u8 -bsf:a aac_adtstoasc -c copy ' + dest + 'output.mp4')
+	os.system('ffmpeg -f concat -safe 0 -i ' + source + 'list.m3u8 -bsf:a aac_adtstoasc -c copy ' + dest + filename)
 
 
 
 def downloadVod(args):
-	m3u = getm3u(args.id)
-	print(m3u.text)
+	m3u = getm3u(args.vod_id)
 	m3u8 = getLinkFromm3u(m3u)
 	links = getAlltsLinks(m3u8)
 	if not os.path.exists(args.path + 'tmp'):
 		os.mkdir(args.path + 'tmp')
-	getAllTS(args.id, links, (args.path + 'tmp/'))
+	getAllTS(args.vod_id, links, (args.path + 'tmp/'), args.threads)
 	createm3u8(args.path + 'tmp')
-	combine((args.path + 'tmp/'), args.path)
+	combine((args.path + 'tmp/'), args.path, args.output)
 	shutil.rmtree(args.path + 'tmp/')
 
 def main():
 	parser = argparse.ArgumentParser()
-	parser.add_argument('id', help='The vod id to pull')
-	parser.add_argument('path', help='The download Path')
+	parser.add_argument('vod_id', help='The ID of the Twitch VOD to download')
+	parser.add_argument('path', help='The path to save the download')
+	parser.add_argument('-o', '--output', help='The filename for the downloaded VOD', default='output.mp4')
+	parser.add_argument('-t', '--threads', help='The number of concurrent requests allowed', type=int, default='10')
 	args = parser.parse_args()
 	if not args.path.endswith('/'):
 		args.path = args.path + '/'
