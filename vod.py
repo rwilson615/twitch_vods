@@ -93,8 +93,9 @@ def downloadVod(args):
 	m3u = getm3u(args.vod_id)
 	m3u8 = getLinkFromm3u(m3u)
 	links = getAlltsLinks(m3u8)
-	if not os.path.exists(args.path + 'tmp'):
-		os.mkdir(args.path + 'tmp')
+	if os.path.exists(args.path + 'tmp'):
+		shutil.rmtree(args.path + 'tmp')
+	os.mkdir(args.path + 'tmp')
 	getAllTS(args.vod_id, links, (args.path + 'tmp/'), args.threads)
 	createm3u8(args.path + 'tmp')
 	combine((args.path + 'tmp/'), args.path, args.output)
