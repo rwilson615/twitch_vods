@@ -88,15 +88,8 @@ def combine(source, dest, filename):
 	print('Combining')
 	os.system('ffmpeg -f concat -safe 0 -i ' + source + 'list.m3u8 -bsf:a aac_adtstoasc -c copy ' + dest + filename)
 
-
-
-def downloadVod(args, clientId):
-	if clientId is not None and clientId != '':
-		m3u = getm3u(args.vod_id, clientId)
-	elif args.clientId is not None and clientId != '':
-		m3u = getm3u(args.vod_id, args.clientId)
-	else:
-		sys.exit('ERROR: Need clientId specified in .twitchrc file or passed in as argument')
+def downloadVod(args):
+	m3u = getm3u(args.vod_id, args.clientId)
 	m3u8 = getLinkFromm3u(m3u)
 	links = getAlltsLinks(m3u8)
 	if os.path.exists(args.path + 'tmp'):
@@ -106,6 +99,10 @@ def downloadVod(args, clientId):
 	createm3u8(args.path + 'tmp')
 	combine((args.path + 'tmp/'), args.path, args.output)
 	shutil.rmtree(args.path + 'tmp/')
+
+def validateClientId(clientId):
+	if clientId is None or clientId == '':
+		sys.exit('ERROR: Need clientId specified in .twitchrc file or passed in as argument')
 
 def main():
 	parser = argparse.ArgumentParser()
@@ -117,13 +114,14 @@ def main():
 	args = parser.parse_args()
 	if not args.path.endswith('/'):
 		args.path = args.path + '/'
-	clientId = None
 	if os.path.isfile(os.path.expanduser('~') + '/.twitchrc'):
-		print ('Twitch path exists')
 		clientFile = open(os.path.expanduser('~')+'/.twitchrc', 'r')
 		clientId = clientFile.readline()
+		if clientId is not None and clientId != '':
+			args.clientId = clientId
 		clientFile.close()	
-	downloadVod(args, clientId)
+	validateClientId(args.clientId)
+	downloadVod(args)
 
 
 if __name__ == "__main__":
