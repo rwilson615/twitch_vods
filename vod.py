@@ -102,13 +102,13 @@ def downloadVod(args):
 
 def validateClientId(clientId):
 	if clientId is None or clientId == '':
-		sys.exit('ERROR: Need clientId specified in .twitchrc file or passed in as argument')
+		sys.exit('ERROR: Need clientId specified in .twitchrc file or passed in as argument. Run with --help for more information')
 
 def main():
 	parser = argparse.ArgumentParser()
 	parser.add_argument('vod_id', help='The ID of the Twitch VOD to download')
 	parser.add_argument('path', help='The path to save the download')
-	parser.add_argument('-c', '--clientId', help='The client id for the twitch client')
+	parser.add_argument('-c', '--clientId', help='The client id for the twitch client. Client id can also be specified in ~/.twitchrc')
 	parser.add_argument('-o', '--output', help='The filename for the downloaded VOD', default='output.mp4')
 	parser.add_argument('-t', '--threads', help='The number of concurrent requests allowed', type=int, default='10')
 	args = parser.parse_args()
